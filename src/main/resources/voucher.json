@@ -1,0 +1,12 @@
+{
+  "shopId": 1,
+  "title": "五折high歌券",
+  "subTitle": "K歌之王",
+  "rules": "全场通用\\n免预约\\n随时退\\n过期退\\n酒水免费",
+  "payValue": 5000,
+  "actualValue": 10000,
+  "type": 1,
+  "stock": 200,
+  "beginTime": "2022-06-30T21:30:00",
+  "endTime": "2022-06-30T23:59:00"
+}

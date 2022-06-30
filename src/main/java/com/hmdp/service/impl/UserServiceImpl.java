@@ -55,7 +55,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 3.符合，生成验证码
         String code = RandomUtil.randomNumbers(6);
 
-        // 4.保存验证码到 session
+        // 4.传统做法是保存验证码到 session， 但是分布式情况下为了做到session共享， 保存到redis
         stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
 
         // 5.发送验证码
@@ -79,6 +79,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             // 不一致，报错
             return Result.fail("验证码错误");
         }
+        log.info("验证码校验通过，皆为:" + code);
 
         // 4.一致，根据手机号查询用户 select * from tb_user where phone = ?
         User user = query().eq("phone", phone).one();
@@ -89,17 +90,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             user = createUserWithPhone(phone);
         }
 
+        //原来的做法是直接将用户信息存到session， 但是会泄漏敏感信息所以做了下面的优化
+        session.setAttribute("user", user);
+
         // 7.保存用户信息到 redis中
         // 7.1.随机生成token，作为登录令牌
         String token = UUID.randomUUID().toString(true);
-        // 7.2.将User对象转为HashMap存储
+        // 7.2.将User对象中的部分属性拷贝到一个新的userDTO对象中(只有都有的属性才会拷贝)，
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        //然后转为HashMap存储，转成map是因为要和后面hash的API要用。
+        //下面第三个参数CopyOptions做的操作是为了将userdto中的非String属性类型转成String类型， 如果不转存redis时会报错。
         Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(),
                 CopyOptions.create()
                         .setIgnoreNullValue(true)
                         .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
         // 7.3.存储
         String tokenKey = LOGIN_USER_KEY + token;
+        //之所以使用hash格式而非之前的String格式是因为：节省空间，并且方便单个属性的存取修改等。
         stringRedisTemplate.opsForHash().putAll(tokenKey, userMap);
         // 7.4.设置token有效期
         stringRedisTemplate.expire(tokenKey, LOGIN_USER_TTL, TimeUnit.MINUTES);
@@ -156,7 +163,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             if ((num & 1) == 0) {
                 // 如果为0，说明未签到，结束
                 break;
-            }else {
+            } else {
                 // 如果不为0，说明已签到，计数器+1
                 count++;
             }

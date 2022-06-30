@@ -47,7 +47,7 @@ class HmDianPingApplicationTests {
         Runnable task = () -> {
             for (int i = 0; i < 100; i++) {
                 long id = redisIdWorker.nextId("order");
-                System.out.println("id = " + id);
+                System.out.println("id = " + Long.toBinaryString(id));
             }
             latch.countDown();
         };

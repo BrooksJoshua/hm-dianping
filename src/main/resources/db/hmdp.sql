@@ -97,7 +97,10 @@ CREATE TABLE `tb_seckill_voucher`  (
 
 -- ----------------------------
 -- Records of tb_seckill_voucher
+-- will be added by java code to familiarized the business procedure.
 -- ----------------------------
+
+
 
 -- ----------------------------
 -- Table structure for tb_shop
